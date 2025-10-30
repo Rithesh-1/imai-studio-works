@@ -32,10 +32,13 @@ import {
   Palette,
   Droplets,
   Clapperboard,
+  Brush,
 } from "lucide-react";
 import Lottie from "lottie-react";
 import catLoadingAnimation from "@/public/lottie/catloading.json";
 import { VideoZoomModal } from "../VideoZoomModal";
+import StreamingMessage from "./StreamingMessage";
+import { useStreamingContext } from "@/contexts/StreamingContext";
 
 interface ChatMessage {
   id?: string;
@@ -66,12 +69,14 @@ interface ChatWindowProps {
   chatId: string;
   onReplyToMessage?: (message: ReferencedMessage) => void;
   onTitleRenamed?: (chatId: string, newTitle: string, category: string) => void; // For backward compatibility
+  openCanvas?: (imageUrl: string) => void;
 }
 
 export default function ChatWindow({
   chatId,
   onReplyToMessage,
   onTitleRenamed,
+  openCanvas,
 }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -79,6 +84,17 @@ export default function ChatWindow({
   const [initialLoad, setInitialLoad] = useState<boolean>(true);
   const [likedImages, setLikedImages] = useState<Set<string>>(new Set());
   const [dislikedImages, setDislikedImages] = useState<Set<string>>(new Set());
+
+  // 🔧 NEW: Use streaming context
+  const {
+    isStreaming,
+    currentText,
+    isComplete,
+    error: streamingError,
+    streamingProgress,
+    hasContent,
+    isStreamingMessage,
+  } = useStreamingContext();
 
   // 🔧 NEW: State for reference mode selection
   const [referenceMode, setReferenceMode] = useState<
@@ -1212,11 +1228,31 @@ export default function ChatWindow({
                         <div className="max-w-[75%] bg-transparent text-primary-foreground rounded-2xl py-2">
                           <div className="text-sm leading-relaxed">
                             <p className="text-black dark:text-white">
-                              {msg.text}
-                              {(msg as any).isStreaming && (
+                              {/* 🔧 NEW: Show streaming text if this message is streaming */}
+                              {isStreamingMessage(msg.id || `${msg.chatId}-${index}`) && hasContent 
+                                ? currentText 
+                                : msg.text}
+                              {isStreamingMessage(msg.id || `${msg.chatId}-${index}`) && isStreaming && (
+                                <span className="animate-pulse ml-1">▊</span>
+                              )}
+                              {!isStreamingMessage(msg.id || `${msg.chatId}-${index}`) && (msg as any).isStreaming && (
                                 <span className="animate-pulse">▊</span>
                               )}
                             </p>
+                            {/* 🔧 NEW: Show streaming progress */}
+                            {isStreamingMessage(msg.id || `${msg.chatId}-${index}`) && isStreaming && (
+                              <div className="mt-2">
+                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
+                                  <div 
+                                    className="bg-primary h-1 rounded-full transition-all duration-300"
+                                    style={{ width: `${streamingProgress}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-xs text-gray-500 mt-1">
+                                  {Math.round(streamingProgress)}% complete
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1327,6 +1363,18 @@ export default function ChatWindow({
                                       className="text-black dark:text-white"
                                     />
                                   </button>
+                                  {openCanvas && (
+                                    <button
+                                      onClick={() => openCanvas(img)}
+                                      className="p-1 rounded-full "
+                                      title="Inpaint Image"
+                                    >
+                                      <Brush
+                                        size={16}
+                                        className="text-black dark:text-white"
+                                      />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={(event) => {
                                       handleDownload(img);

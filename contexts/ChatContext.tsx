@@ -33,6 +33,7 @@ interface ChatContextType {
   backgroundCleanup: () => Promise<void>;
   isLoading: boolean;
   isSwitching: boolean;
+  openCanvas?: (imageUrl: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);

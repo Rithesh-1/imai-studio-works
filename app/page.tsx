@@ -6,10 +6,13 @@ import { useChat } from "@/contexts/ChatContext";
 import UnifiedPromptContainer from "./components/unified-prompt-container";
 import ChatWindow from "./components/chat/chatwindow";
 import WelcomeScreen from "./components/WelcomeScreen";
+import InpaintCanvas from "./components/chat/InpaintCanvas";
+import { useInpaintCanvas } from "@/hooks/useInpaintCanvas";
 import { doc, setDoc, Timestamp, getDoc } from "firebase/firestore";
 import { firestore } from "@/lib/firebase";
 const MODAL_SHOWN_KEY = "modalDismissedOnce";
 import MobileNav from "./components/MobileNav";
+import StreamingDemo from "./components/StreamingDemo";
 
 // 🔧 NEW: Interface for reply/reference functionality
 interface ReferencedMessage {
@@ -34,6 +37,61 @@ export default function Home() {
     isSwitching,
     createNewChat,
   } = useChat();
+
+  // Inpainting functionality
+  const {
+    isCanvasOpen,
+    currentImageUrl,
+    openCanvas,
+    closeCanvas,
+    handleInpaintComplete,
+  } = useInpaintCanvas({
+    onInpaintComplete: async (resultUrl) => {
+      // Add the inpainted image directly to chat without going through intent route
+      if (!currentUser || !currentChatId) {
+        console.error("User not authenticated or no chat ID");
+        return;
+      }
+
+      try {
+        const chatRef = doc(
+          firestore,
+          `chats/${currentUser.uid}/prompts/${currentChatId}`,
+        );
+
+        // Create the inpainted image message
+        const inpaintedMessage = {
+          sender: "agent",
+          type: "images",
+          text: "Here's your inpainted image:",
+          images: [resultUrl],
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          userId: currentUser.uid,
+          chatId: currentChatId,
+        };
+
+        // Get existing messages
+        const chatDoc = await getDoc(chatRef);
+        const existingMessages = chatDoc.exists()
+          ? chatDoc.data().messages || []
+          : [];
+
+        // Add the inpainted image message to Firestore
+        await setDoc(
+          chatRef,
+          {
+            messages: [...existingMessages, inpaintedMessage],
+          },
+          { merge: true },
+        );
+
+        console.log("✅ Inpainted image added directly to chat:", resultUrl);
+      } catch (error) {
+        console.error("❌ Error adding inpainted image to chat:", error);
+      }
+    },
+  });
 
   // Debug: Track currentChatId changes
   useEffect(() => {
@@ -95,6 +153,8 @@ export default function Home() {
   const [hasMessages, setHasMessages] = useState(false);
   // 🔧 NEW: State to track if we're checking for messages
   const [isCheckingMessages, setIsCheckingMessages] = useState(false);
+
+
 
   const [modalShown, setModalShown] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -946,17 +1006,32 @@ export default function Home() {
             </div>
           ) : !hasMessages ? (
             <div className="flex items-center justify-center h-full">
-              <WelcomeScreen onExampleClick={handleExampleClick} />
+              <div className="w-full max-w-4xl mx-auto p-4">
+                <StreamingDemo />
+                <div className="mt-8">
+                  <WelcomeScreen onExampleClick={handleExampleClick} />
+                </div>
+              </div>
             </div>
           ) : (
             <ChatWindow
               chatId={currentChatId}
               onReplyToMessage={handleReplyToMessage}
               onTitleRenamed={handleTitleRenamed}
+              openCanvas={openCanvas}
             />
           )}
         </div>
       </div>
+
+      {/* Inpaint Canvas */}
+      {isCanvasOpen && currentImageUrl && (
+        <InpaintCanvas
+          imageUrl={currentImageUrl}
+          onClose={closeCanvas}
+          onInpaintComplete={handleInpaintComplete}
+        />
+      )}
 
       {/* Fixed Prompt Input at the bottom - Always visible */}
       <div className="mobile-input-area px-2">

@@ -11,6 +11,7 @@ import GlobalModal from "@/app/components/GlobalModal";
 import ConditionalSidebar from "./components/ConditionalSidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ChatProvider } from "@/contexts/ChatContext";
+import { StreamingProvider } from "@/contexts/StreamingContext";
 import { GoogleTagManager } from "@/app/components/seo/GoogleTagManager";
 import { AhrefsAnalytics } from "@/app/components/seo/AhrefsAnalytics";
 import { SEOHead } from "@/app/components/seo/SEOHead";
@@ -198,12 +199,14 @@ export default function RootLayout({
           <main>
             <AuthProvider>
               <ChatProvider>
-                <ShareModalProvider>
-                  <GlobalModalProvider>
-                    <ConditionalSidebar>{children}</ConditionalSidebar>
-                    <GlobalModal />
-                  </GlobalModalProvider>
-                </ShareModalProvider>
+                <StreamingProvider>
+                  <ShareModalProvider>
+                    <GlobalModalProvider>
+                      <ConditionalSidebar>{children}</ConditionalSidebar>
+                      <GlobalModal />
+                    </GlobalModalProvider>
+                  </ShareModalProvider>
+                </StreamingProvider>
               </ChatProvider>
             </AuthProvider>
             <SpeedInsights />
