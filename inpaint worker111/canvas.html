@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Mask Canvas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .canvas-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: 3px solid #e9ecef;
+            border-radius: 10px;
+            background: #f8f9fa;
+            transition: border-color 0.3s ease;
+        }
+        
+        .canvas-wrapper.ready {
+            border-color: #00b894;
+        }
+        
+        .canvas-wrapper.loading {
+            border-color: #f39c12;
+        }
+        
+        .image-canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .mask-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            pointer-events: auto;
+            mix-blend-mode: multiply;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .control-group {
+            margin: 15px 0;
+        }
+        
+        .control-group label {
+            display: inline-block;
+            margin-right: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .control-group input {
+            padding: 8px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            margin-right: 15px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn.secondary {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+        }
+        
+        .btn.danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        }
+        
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        
+        .status.success {
+            background: #e6ffe6;
+            color: #00b894;
+            border-left: 4px solid #00b894;
+        }
+        
+        .status.error {
+            background: #ffe6e6;
+            color: #d63031;
+            border-left: 4px solid #d63031;
+        }
+        
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .image-selector {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .image-selector select {
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        .brush-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .canvas-info {
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .file-upload-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .file-upload-section:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+        
+        .file-name {
+            margin-left: 10px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .inpainting-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            color: white;
+        }
+        
+        .inpainting-section h3 {
+            margin: 0 0 15px 0;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .inpainting-section input[type="text"] {
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        .inpainting-section input[type="text"]:focus {
+            outline: none;
+            background: white;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        .inpainting-section .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            margin: 5px;
+        }
+        
+        .inpainting-section .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .inpainting-section .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+
+        /* Result Section Styles */
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            color: white;
+        }
+
+        .result-section h3 {
+            margin: 0 0 15px 0;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .result-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .result-image {
+            max-width: 100%;
+            max-height: 600px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .result-info {
+            text-align: center;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Image Mask Canvas</h1>
+            <p>Draw masks on images using the canvas tool</p>
+        </div>
+
+        <div class="image-selector">
+            <div class="file-upload-section">
+                <label for="fileInput" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">Upload your image:</label>
+                <input type="file" id="fileInput" accept="image/*" onchange="loadExternalImage()" style="display: none;">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+                <span id="fileName" class="file-name"></span>
+            </div>
+            
+            <div class="file-upload-section" style="margin-top: 15px;">
+                <label for="referenceImagesInput" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">Upload reference images (optional):</label>
+                <input type="file" id="referenceImagesInput" accept="image/*" multiple onchange="loadReferenceImages()" style="display: none;">
+                <button class="btn" onclick="document.getElementById('referenceImagesInput').click()">Choose Reference Images</button>
+                <span id="referenceFileNames" class="file-name"></span>
+                <button class="btn danger" onclick="clearReferenceImages()" style="margin-left: 10px; display: none;" id="clearReferenceBtn">Clear All</button>
+            </div>
+            
+            <div id="referenceImagesPreview" style="margin-top: 10px; display: none;">
+                <div style="font-weight: bold; color: #333; margin-bottom: 5px;">Reference Images:</div>
+                <div id="referenceImagesList" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="brushSize">Brush Size:</label>
+                <input type="range" id="brushSize" min="10" max="100" value="30" onchange="updateBrushSize()">
+                <span id="brushSizeValue">30</span>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn" onclick="clearMask()">Clear Mask</button>
+                <button class="btn" onclick="saveOriginal()">Save Original</button>
+                <button class="btn" onclick="saveWithDarkGrey()">Save with Dark Grey</button>
+                <button class="btn danger" onclick="resetCanvas()">Reset</button>
+            </div>
+        </div>
+
+        <!-- Inpainting Controls -->
+        <div class="inpainting-section">
+            <h3>AI Inpainting</h3>
+            <div class="control-group">
+                <label for="inpaintPrompt">Inpainting Prompt:</label>
+                <input type="text" id="inpaintPrompt" placeholder="Describe what you want to generate in the masked area..." 
+                       value="Change the car into a modern style Porsche inspired car" style="width: 100%; padding: 10px; margin: 10px 0;">
+            </div>
+            <div class="control-group">
+                <button class="btn secondary" onclick="performInpainting()" id="inpaintBtn">Generate with AI</button>
+            </div>
+        </div>
+
+        <div class="brush-info">
+            <strong>Instructions:</strong> Upload an image, then click and drag to draw the grey mask. Masked regions will be completely erased when saving.
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="imageCanvas" class="image-canvas"></canvas>
+                <canvas id="maskCanvas" class="mask-canvas"></canvas>
+            </div>
+            <div class="canvas-info" id="canvasInfo">
+                Upload an image to start editing
+            </div>
+        </div>
+
+        <!-- Result Display Section -->
+        <div class="result-section" id="resultSection" style="display: none;">
+            <h3>Generated Result</h3>
+            <div class="result-container">
+                <img id="resultImage" class="result-image" alt="Generated result">
+                <div class="result-info" id="resultInfo"></div>
+            </div>
+        </div>
+
+        <div class="status" id="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        let isDrawing = false;
+        let brushSize = 30;
+        let currentImage = null;
+        let imageLoaded = false;
+        let canvasScale = { x: 1, y: 1 };
+        let referenceImages = [];
+        let referenceImagesLoaded = false;
+
+        const imageCanvas = document.getElementById('imageCanvas');
+        const maskCanvas = document.getElementById('maskCanvas');
+        const imageCtx = imageCanvas.getContext('2d');
+        const maskCtx = maskCanvas.getContext('2d');
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        const canvasInfo = document.getElementById('canvasInfo');
+
+
+
+        function updateBrushSize() {
+            const slider = document.getElementById('brushSize');
+            const display = document.getElementById('brushSizeValue');
+            brushSize = parseInt(slider.value);
+            display.textContent = brushSize;
+            console.log('Brush size updated:', brushSize);
+        }
+
+        function getMousePos(canvas, e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            console.log('Mouse position:', x, y);
+            return { x, y };
+        }
+
+        function startDrawing(e) {
+            if (!imageLoaded) {
+                console.log('Cannot draw: image not loaded');
+                return;
+            }
+            console.log('Started drawing');
+            isDrawing = true;
+            draw(e);
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                console.log('Stopped drawing');
+            }
+            isDrawing = false;
+        }
+
+        function draw(e) {
+            if (!isDrawing || !imageLoaded) return;
+
+            const pos = getMousePos(maskCanvas, e);
+            
+            // Ensure we're within canvas bounds
+            if (pos.x < 0 || pos.x > maskCanvas.width || pos.y < 0 || pos.y > maskCanvas.height) {
+                return;
+            }
+            
+            console.log('Drawing at:', pos.x, pos.y, 'brush size:', brushSize);
+            
+            // Draw on mask canvas with solid grey color using precise brush method
+            maskCtx.fillStyle = 'rgb(80, 80, 80)';
+            maskCtx.globalCompositeOperation = 'source-over';
+            
+            // Draw a solid circle at the current position
+            maskCtx.beginPath();
+            maskCtx.arc(pos.x, pos.y, brushSize / 2, 0, Math.PI * 2);
+            maskCtx.fill();
+        }
+
+        function clearMask() {
+            if (!imageLoaded) {
+                showStatus('Please load an image first', 'error');
+                return;
+            }
+            
+            // Clear the mask canvas completely
+            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+            
+            // Reset any global composite operations
+            maskCtx.globalCompositeOperation = 'source-over';
+            
+            showStatus('Mask cleared', 'success');
+            console.log('Mask cleared');
+        }
+
+        function saveMask() {
+            if (!imageLoaded) {
+                showStatus('Please load an image first', 'error');
+                return;
+            }
+
+            // Create a temporary canvas for the original size image
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Use original image dimensions
+            tempCanvas.width = currentImage.width;
+            tempCanvas.height = currentImage.height;
+            
+            // Draw the original image at full size
+            tempCtx.drawImage(currentImage, 0, 0);
+            
+            // Create a mask canvas at original size
+            const originalMaskCanvas = document.createElement('canvas');
+            const originalMaskCtx = originalMaskCanvas.getContext('2d');
+            originalMaskCanvas.width = currentImage.width;
+            originalMaskCanvas.height = currentImage.height;
+            
+            // Scale the mask from display size to original size
+            originalMaskCtx.drawImage(maskCanvas, 0, 0, currentImage.width, currentImage.height);
+            
+            // Get the mask data to identify masked regions
+            const maskData = originalMaskCtx.getImageData(0, 0, currentImage.width, currentImage.height);
+            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Erase masked regions completely (make them transparent)
+            for (let i = 0; i < maskData.data.length; i += 4) {
+                if (maskData.data[i] > 0 || maskData.data[i + 1] > 0 || maskData.data[i + 2] > 0) {
+                    // This pixel is masked - make it transparent
+                    imageData.data[i + 3] = 0; // Set alpha to 0 (transparent)
+                }
+            }
+            
+            // Put the modified image data back
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            const link = document.createElement('a');
+            link.download = 'image_with_erased_regions.png';
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
+            
+            showStatus(`Image with erased regions saved at ${currentImage.width} x ${currentImage.height}`, 'success');
+            console.log('Image with erased regions saved at original dimensions');
+        }
+
+        function saveWithDarkGrey() {
+            if (!imageLoaded) {
+                showStatus('Please load an image first', 'error');
+                return;
+            }
+
+            // Create a temporary canvas for the original size image
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Use original image dimensions
+            tempCanvas.width = currentImage.width;
+            tempCanvas.height = currentImage.height;
+            
+            // Draw the original image at full size
+            tempCtx.drawImage(currentImage, 0, 0);
+            
+            // Create a mask canvas at original size
+            const originalMaskCanvas = document.createElement('canvas');
+            const originalMaskCtx = originalMaskCanvas.getContext('2d');
+            originalMaskCanvas.width = currentImage.width;
+            originalMaskCanvas.height = currentImage.height;
+            
+            // Scale the mask from display size to original size
+            originalMaskCtx.drawImage(maskCanvas, 0, 0, currentImage.width, currentImage.height);
+            
+            // Get the mask data to identify masked regions
+            const maskData = originalMaskCtx.getImageData(0, 0, currentImage.width, currentImage.height);
+            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Fill masked regions with dark grey instead of making them transparent
+            for (let i = 0; i < maskData.data.length; i += 4) {
+                if (maskData.data[i] > 0 || maskData.data[i + 1] > 0 || maskData.data[i + 2] > 0) {
+                    // This pixel is masked - fill it with dark grey
+                    imageData.data[i] = 50;      // R (dark grey)
+                    imageData.data[i + 1] = 50;  // G (dark grey)
+                    imageData.data[i + 2] = 50;  // B (dark grey)
+                    imageData.data[i + 3] = 255; // A (full opacity)
+                }
+            }
+            
+            // Put the modified image data back
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            const link = document.createElement('a');
+            link.download = 'image_with_dark_grey_regions.png';
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
+            
+            showStatus(`Image with dark grey regions saved at ${currentImage.width} x ${currentImage.height}`, 'success');
+            console.log('Image with dark grey regions saved at original dimensions');
+        }
+
+        function saveOriginal() {
+            if (!imageLoaded) {
+                showStatus('Please load an image first', 'error');
+                return;
+            }
+
+            // Create a canvas for the original image
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Use original image dimensions
+            tempCanvas.width = currentImage.width;
+            tempCanvas.height = currentImage.height;
+            
+            // Draw the original image at full size
+            tempCtx.drawImage(currentImage, 0, 0);
+            
+            const link = document.createElement('a');
+            link.download = 'original_image.png';
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
+            
+            showStatus(`Original image saved at ${currentImage.width} x ${currentImage.height}`, 'success');
+            console.log('Original image saved at full dimensions');
+        }
+
+        function resetCanvas() {
+            if (!imageLoaded) {
+                showStatus('Please load an image first', 'error');
+                return;
+            }
+            
+            // Redraw the original image
+            imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+            imageCtx.drawImage(currentImage, 0, 0, imageCanvas.width, imageCanvas.height);
+            
+            // Clear the mask and reset settings
+            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+            maskCtx.globalCompositeOperation = 'source-over';
+            maskCtx.imageSmoothingEnabled = false;
+            
+            showStatus('Canvas reset to original state', 'success');
+            console.log('Canvas reset');
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.textContent = message;
+            status.className = `status ${type}`;
+            
+            console.log('Status:', type, message);
+            
+            // Auto-hide success messages after 3 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Event listeners
+        maskCanvas.addEventListener('mousedown', startDrawing);
+        maskCanvas.addEventListener('mousemove', draw);
+        maskCanvas.addEventListener('mouseup', stopDrawing);
+        maskCanvas.addEventListener('mouseleave', stopDrawing);
+
+        // Initialize
+        updateBrushSize();
+        console.log('Canvas page initialized');
+
+        function loadExternalImage() {
+            const fileInput = document.getElementById('fileInput');
+            const fileName = document.getElementById('fileName');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('No file selected', 'error');
+                return;
+            }
+            
+            // Check if file is an image
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please select an image file', 'error');
+                return;
+            }
+            
+            // Display filename
+            fileName.textContent = file.name;
+            
+            // Set loading state
+            canvasWrapper.className = 'canvas-wrapper loading';
+            showStatus('Loading external image...', 'loading');
+            canvasInfo.textContent = 'Loading external image...';
+            
+            const img = new Image();
+            
+            img.onload = function() {
+                console.log('External image loaded successfully:', file.name);
+                console.log('Original image size:', img.width, 'x', img.height);
+                
+                currentImage = img;
+                imageLoaded = true;
+                
+                // Check if reference images are loaded
+                const hasReferenceImages = referenceImagesLoaded && referenceImages.length > 0;
+                
+                let displayWidth, displayHeight;
+                
+                if (hasReferenceImages) {
+                    // If reference images are loaded, resize to 1024x1024 (1:1 aspect ratio)
+                    displayWidth = 1024;
+                    displayHeight = 1024;
+                    console.log('🖼️ Reference images detected - resizing canvas to 1024x1024');
+                } else {
+                    // If no reference images, use original dimensions with max size limit
+                    const maxSize = 800;
+                    displayWidth = img.width;
+                    displayHeight = img.height;
+                    
+                    if (displayWidth > maxSize || displayHeight > maxSize) {
+                        const ratio = Math.min(maxSize / displayWidth, maxSize / displayHeight);
+                        displayWidth = Math.floor(displayWidth * ratio);
+                        displayHeight = Math.floor(displayHeight * ratio);
+                    }
+                    console.log('📏 No reference images - using original dimensions');
+                }
+                
+                console.log('Display size:', displayWidth, 'x', displayHeight);
+                
+                // Set canvas dimensions for display
+                imageCanvas.width = displayWidth;
+                imageCanvas.height = displayHeight;
+                maskCanvas.width = displayWidth;
+                maskCanvas.height = displayHeight;
+                
+                // Calculate scale factors for coordinate conversion
+                canvasScale.x = displayWidth / img.width;
+                canvasScale.y = displayHeight / img.height;
+                
+                console.log('Canvas scale:', canvasScale);
+                
+                // Clear both canvases
+                imageCtx.clearRect(0, 0, displayWidth, displayHeight);
+                maskCtx.clearRect(0, 0, displayWidth, displayHeight);
+                
+                // Initialize mask canvas with proper settings
+                maskCtx.globalCompositeOperation = 'source-over';
+                maskCtx.imageSmoothingEnabled = false; // Disable anti-aliasing for crisp edges
+                
+                // Draw the image based on whether reference images are loaded
+                if (hasReferenceImages) {
+                    // Calculate how to fit the image into 1024x1024 while maintaining aspect ratio
+                    const imageAspectRatio = img.width / img.height;
+                    const canvasAspectRatio = displayWidth / displayHeight;
+                    
+                    let drawWidth, drawHeight, offsetX, offsetY;
+                    
+                    if (imageAspectRatio > canvasAspectRatio) {
+                        // Image is wider than canvas - fit to width
+                        drawWidth = displayWidth;
+                        drawHeight = displayWidth / imageAspectRatio;
+                        offsetX = 0;
+                        offsetY = (displayHeight - drawHeight) / 2;
+                    } else {
+                        // Image is taller than canvas - fit to height
+                        drawHeight = displayHeight;
+                        drawWidth = displayHeight * imageAspectRatio;
+                        offsetX = (displayWidth - drawWidth) / 2;
+                        offsetY = 0;
+                    }
+                    
+                    // Draw the image centered and scaled to fit 1024x1024
+                    imageCtx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+                } else {
+                    // Draw scaled image on image canvas for display (original behavior)
+                    imageCtx.drawImage(img, 0, 0, displayWidth, displayHeight);
+                }
+                
+                // Set ready state
+                canvasWrapper.className = 'canvas-wrapper ready';
+                
+                if (hasReferenceImages) {
+                    canvasInfo.textContent = `Image loaded: ${img.width} x ${img.height} (resized to 1024x1024 for reference compatibility)`;
+                    showStatus('Image loaded and resized to 1024x1024 for reference compatibility!', 'success');
+                } else {
+                    canvasInfo.textContent = `External image loaded: ${img.width} x ${img.height} (displayed at ${displayWidth} x ${displayHeight})`;
+                    showStatus('External image loaded successfully! Start drawing to mark regions for erasing.', 'success');
+                }
+                
+                console.log('External canvas setup complete');
+                
+                // Clean up object URL
+                URL.revokeObjectURL(img.src);
+            };
+            
+            img.onerror = function() {
+                console.error('Failed to load external image:', file.name);
+                canvasWrapper.className = 'canvas-wrapper';
+                canvasInfo.textContent = 'Failed to load external image';
+                fileName.textContent = '';
+                showStatus('Failed to load external image: ' + file.name, 'error');
+            };
+            
+            // Create object URL for the file
+            const objectUrl = URL.createObjectURL(file);
+            img.src = objectUrl;
+        }
+
+        function loadReferenceImages() {
+            const fileInput = document.getElementById('referenceImagesInput');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                showStatus('No reference images selected', 'error');
+                return;
+            }
+            
+            // Check if all files are images
+            for (let file of files) {
+                if (!file.type.startsWith('image/')) {
+                    showStatus('Please select only image files for reference images', 'error');
+                    return;
+                }
+            }
+            
+            // Set loading state
+            showStatus(`Loading ${files.length} reference image(s)...`, 'loading');
+            
+            referenceImages = [];
+            referenceImagesLoaded = false;
+            
+            const fileNames = [];
+            const previewContainer = document.getElementById('referenceImagesList');
+            previewContainer.innerHTML = '';
+            
+            let loadedCount = 0;
+            
+            Array.from(files).forEach((file, index) => {
+                const img = new Image();
+                img.onload = function() {
+                    referenceImages.push({
+                        image: img,
+                        name: file.name,
+                        dataUrl: img.src
+                    });
+                    
+                    // Create preview thumbnail
+                    const previewDiv = document.createElement('div');
+                    previewDiv.style.cssText = 'position: relative; display: inline-block; margin: 5px;';
+                    
+                    const previewImg = document.createElement('img');
+                    previewImg.src = img.src;
+                    previewImg.style.cssText = 'width: 80px; height: 80px; object-fit: cover; border-radius: 5px; border: 2px solid #ddd;';
+                    previewImg.alt = file.name;
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.textContent = '×';
+                    removeBtn.style.cssText = 'position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px;';
+                    removeBtn.onclick = function() {
+                        removeReferenceImage(index);
+                    };
+                    
+                    previewDiv.appendChild(previewImg);
+                    previewDiv.appendChild(removeBtn);
+                    previewContainer.appendChild(previewDiv);
+                    
+                    fileNames.push(file.name);
+                    document.getElementById('referenceFileNames').textContent = fileNames.join(', ');
+                    document.getElementById('clearReferenceBtn').style.display = 'inline-block';
+                    document.getElementById('referenceImagesPreview').style.display = 'block';
+                    
+                    console.log(`Reference image ${index + 1} loaded:`, file.name, img.width + 'x' + img.height);
+                    
+                    loadedCount++;
+                    if (loadedCount === files.length) {
+                        referenceImagesLoaded = true;
+                        showStatus(`${referenceImages.length} reference image(s) loaded successfully`, 'success');
+                        console.log(`✅ All ${referenceImages.length} reference images loaded successfully`);
+                        
+                        // Resize canvas if main image is loaded
+                        if (imageLoaded && currentImage) {
+                            resizeCanvasForReferenceImages();
+                        }
+                    }
+                };
+                
+                img.onerror = function() {
+                    console.error('Failed to load reference image:', file.name);
+                    showStatus('Failed to load reference image: ' + file.name, 'error');
+                };
+                
+                // Create object URL for the file
+                const objectUrl = URL.createObjectURL(file);
+                img.src = objectUrl;
+            });
+        }
+
+        function removeReferenceImage(index) {
+            referenceImages.splice(index, 1);
+            updateReferenceImagesDisplay();
+            console.log(`Reference image ${index + 1} removed`);
+        }
+
+        function clearReferenceImages() {
+            referenceImages = [];
+            referenceImagesLoaded = false;
+            document.getElementById('referenceImagesInput').value = '';
+            document.getElementById('referenceFileNames').textContent = '';
+            document.getElementById('clearReferenceBtn').style.display = 'none';
+            document.getElementById('referenceImagesPreview').style.display = 'none';
+            document.getElementById('referenceImagesList').innerHTML = '';
+            showStatus('All reference images cleared', 'success');
+            console.log('🧹 All reference images cleared');
+            
+            // Reset canvas to original dimensions if main image is loaded
+            if (imageLoaded && currentImage) {
+                resetCanvasToOriginalDimensions();
+            }
+        }
+
+        function updateReferenceImagesDisplay() {
+            const fileNames = referenceImages.map(img => img.name);
+            document.getElementById('referenceFileNames').textContent = fileNames.join(', ');
+            
+            const previewContainer = document.getElementById('referenceImagesList');
+            previewContainer.innerHTML = '';
+            
+            referenceImages.forEach((imgData, index) => {
+                const previewDiv = document.createElement('div');
+                previewDiv.style.cssText = 'position: relative; display: inline-block; margin: 5px;';
+                
+                const previewImg = document.createElement('img');
+                previewImg.src = imgData.dataUrl;
+                previewImg.style.cssText = 'width: 80px; height: 80px; object-fit: cover; border-radius: 5px; border: 2px solid #ddd;';
+                previewImg.alt = imgData.name;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '×';
+                removeBtn.style.cssText = 'position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px;';
+                removeBtn.onclick = function() {
+                    removeReferenceImage(index);
+                };
+                
+                previewDiv.appendChild(previewImg);
+                previewDiv.appendChild(removeBtn);
+                previewContainer.appendChild(previewDiv);
+            });
+            
+            if (referenceImages.length === 0) {
+                document.getElementById('clearReferenceBtn').style.display = 'none';
+                document.getElementById('referenceImagesPreview').style.display = 'none';
+            }
+        }
+
+        // Inpainting Functions
+        async function performInpainting() {
+            console.log('🚀 Starting inpainting process...');
+            
+            if (!imageLoaded) {
+                console.error('❌ No image loaded');
+                showStatus('Please load an image first', 'error');
+                return;
+            }
+
+            const prompt = document.getElementById('inpaintPrompt').value;
+            if (!prompt.trim()) {
+                console.error('❌ No prompt provided');
+                showStatus('Please enter a prompt for inpainting', 'error');
+                return;
+            }
+
+            console.log(`📝 Inpainting prompt: "${prompt}"`);
+            console.log(`🖼️ Original image dimensions: ${currentImage.width}x${currentImage.height}`);
+
+            const inpaintBtn = document.getElementById('inpaintBtn');
+            const originalText = inpaintBtn.innerHTML;
+            
+            // Show loading state
+            inpaintBtn.disabled = true;
+            inpaintBtn.innerHTML = '<span class="loading-spinner"></span>Generating...';
+            showStatus('Starting AI inpainting...', 'loading');
+
+            try {
+                console.log('🔧 Step 1: Creating original image data...');
+                const originalImageData = createOriginalImageData();
+                console.log('✅ Original image data created successfully');
+                
+                console.log('🔧 Step 2: Creating dark grey mask data...');
+                const maskData = createDarkGreyMaskData();
+                console.log('✅ Dark grey mask data created successfully');
+
+                console.log('🔧 Step 3: Creating reference images data (if available)...');
+                const referenceImagesData = createReferenceImagesData();
+                if (referenceImagesData && referenceImagesData.length > 0) {
+                    console.log(`✅ ${referenceImagesData.length} reference image(s) data created successfully`);
+                } else {
+                    console.log('ℹ️ No reference images provided');
+                }
+
+                console.log('🌐 Step 4: Sending inpainting request to server...');
+                const requestBody = {
+                    prompt: prompt,
+                    imageData: originalImageData,
+                    maskData: maskData
+                };
+                
+                // Add reference images data if available
+                if (referenceImagesData && referenceImagesData.length > 0) {
+                    requestBody.referenceImages = referenceImagesData;
+                }
+                
+                const response = await fetch('/api/inpainting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+
+                console.log(`📡 Server response status: ${response.status}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('📋 Server response received:', result);
+                
+                if (result.success) {
+                    console.log('🎉 Inpainting completed successfully!');
+                    showStatus('Inpainting completed successfully!', 'success');
+                    
+                    console.log('🖼️ Step 4: Displaying inpainting result...');
+                    displayInpaintedResult(result.imageData);
+                } else {
+                    throw new Error(result.error || 'Inpainting failed');
+                }
+
+            } catch (error) {
+                console.error('❌ Inpainting error:', error);
+                showStatus('Inpainting failed: ' + error.message, 'error');
+            } finally {
+                console.log('🔄 Resetting button state...');
+                // Reset button state
+                inpaintBtn.disabled = false;
+                inpaintBtn.innerHTML = originalText;
+            }
+        }
+
+
+
+        function createOriginalImageData() {
+            console.log('🔧 Creating original image data...');
+            console.log(`📏 Original image dimensions: ${currentImage.width}x${currentImage.height}`);
+            
+            // Create a temporary canvas for the original size image (PNG format)
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Check if image is too large for API (OpenAI has limits)
+            const maxDimension = 2048;
+            let finalWidth = currentImage.width;
+            let finalHeight = currentImage.height;
+            
+            if (currentImage.width > maxDimension || currentImage.height > maxDimension) {
+                console.log(`🔄 Resizing image from ${currentImage.width}x${currentImage.height} to fit API limits...`);
+                const ratio = Math.min(maxDimension / currentImage.width, maxDimension / currentImage.height);
+                finalWidth = Math.floor(currentImage.width * ratio);
+                finalHeight = Math.floor(currentImage.height * ratio);
+                console.log(`📏 Resized to: ${finalWidth}x${finalHeight}`);
+            }
+            
+            // Use final dimensions
+            tempCanvas.width = finalWidth;
+            tempCanvas.height = finalHeight;
+            
+            console.log(`🎨 Canvas created with dimensions: ${finalWidth}x${finalHeight}`);
+            
+            // Draw the image with proper scaling
+            tempCtx.drawImage(currentImage, 0, 0, finalWidth, finalHeight);
+            console.log('✅ Image drawn to canvas successfully');
+            
+            // Convert to base64 PNG with compression
+            const dataUrl = tempCanvas.toDataURL('image/png', 0.9); // 90% quality for smaller size
+            console.log(`📊 Original image data size: ${Math.round(dataUrl.length / 1024)}KB`);
+            return dataUrl;
+        }
+
+        function createDarkGreyMaskData() {
+            console.log('🔧 Creating dark grey mask data...');
+            console.log(`📏 Original image dimensions: ${currentImage.width}x${currentImage.height}`);
+            console.log(`🎨 Display canvas dimensions: ${maskCanvas.width}x${maskCanvas.height}`);
+            
+            // Create a temporary canvas for the original size image
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Check if image is too large for API (OpenAI has limits)
+            const maxDimension = 2048;
+            let finalWidth = currentImage.width;
+            let finalHeight = currentImage.height;
+            
+            if (currentImage.width > maxDimension || currentImage.height > maxDimension) {
+                console.log(`🔄 Resizing mask from ${currentImage.width}x${currentImage.height} to fit API limits...`);
+                const ratio = Math.min(maxDimension / currentImage.width, maxDimension / currentImage.height);
+                finalWidth = Math.floor(currentImage.width * ratio);
+                finalHeight = Math.floor(currentImage.height * ratio);
+                console.log(`📏 Resized to: ${finalWidth}x${finalHeight}`);
+            }
+            
+            // Use final dimensions
+            tempCanvas.width = finalWidth;
+            tempCanvas.height = finalHeight;
+            console.log(`🎨 Temp canvas created with dimensions: ${finalWidth}x${finalHeight}`);
+            
+            // Draw the original image at final size
+            tempCtx.drawImage(currentImage, 0, 0, finalWidth, finalHeight);
+            console.log('✅ Original image drawn to temp canvas');
+            
+            // Create a mask canvas at final size
+            const originalMaskCanvas = document.createElement('canvas');
+            const originalMaskCtx = originalMaskCanvas.getContext('2d');
+            originalMaskCanvas.width = finalWidth;
+            originalMaskCanvas.height = finalHeight;
+            console.log(`🎨 Mask canvas created with dimensions: ${finalWidth}x${finalHeight}`);
+            
+            // Scale the mask from display size to final size
+            console.log(`🔄 Scaling mask from display size (${maskCanvas.width}x${maskCanvas.height}) to final size (${finalWidth}x${finalHeight})`);
+            originalMaskCtx.drawImage(maskCanvas, 0, 0, finalWidth, finalHeight);
+            console.log('✅ Mask scaled successfully');
+            
+            // Get the mask data to identify masked regions
+            const maskData = originalMaskCtx.getImageData(0, 0, finalWidth, finalHeight);
+            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            console.log(`🔍 Processing image: ${finalWidth}x${finalHeight}, RGBA channels: ${imageData.data.length / 4} pixels`);
+            console.log(`🔍 Mask data length: ${maskData.data.length} bytes`);
+            
+            let maskedPixels = 0;
+            // Fill masked regions with dark grey (like inpaint method)
+            for (let i = 0; i < maskData.data.length; i += 4) {
+                if (maskData.data[i] > 0 || maskData.data[i + 1] > 0 || maskData.data[i + 2] > 0) {
+                    // This pixel is masked - fill it with dark grey
+                    imageData.data[i] = 50;      // R (dark grey)
+                    imageData.data[i + 1] = 50;  // G (dark grey)
+                    imageData.data[i + 2] = 50;  // B (dark grey)
+                    imageData.data[i + 3] = 255; // A (full opacity - RGBA)
+                    maskedPixels++;
+                }
+            }
+            
+            console.log(`🎭 Found ${maskedPixels} masked pixels out of ${imageData.data.length / 4} total pixels`);
+            
+            // Put the modified image data back
+            tempCtx.putImageData(imageData, 0, 0);
+            console.log('✅ Modified image data applied to canvas');
+            
+            // Convert to base64 PNG with RGBA support (like inpaint method)
+            const dataUrl = tempCanvas.toDataURL('image/png');
+            console.log(`📊 Mask data size: ${Math.round(dataUrl.length / 1024)}KB`);
+            return dataUrl;
+        }
+
+        function createReferenceImagesData() {
+            if (!referenceImagesLoaded || referenceImages.length === 0) {
+                console.log('⚠️ No reference images loaded, skipping reference images data creation');
+                return null;
+            }
+            
+            console.log(`🔧 Creating ${referenceImages.length} reference image(s) data...`);
+            
+            const referenceImagesData = [];
+            
+            referenceImages.forEach((imgData, index) => {
+                console.log(`📏 Reference image ${index + 1} dimensions: ${imgData.image.width}x${imgData.image.height}`);
+                
+                // Create a temporary canvas for the reference image
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // Check if image is too large for API (OpenAI has limits)
+                const maxDimension = 2048;
+                let finalWidth = imgData.image.width;
+                let finalHeight = imgData.image.height;
+                
+                if (imgData.image.width > maxDimension || imgData.image.height > maxDimension) {
+                    console.log(`🔄 Resizing reference image ${index + 1} from ${imgData.image.width}x${imgData.image.height} to fit API limits...`);
+                    const ratio = Math.min(maxDimension / imgData.image.width, maxDimension / imgData.image.height);
+                    finalWidth = Math.floor(imgData.image.width * ratio);
+                    finalHeight = Math.floor(imgData.image.height * ratio);
+                    console.log(`📏 Resized to: ${finalWidth}x${finalHeight}`);
+                }
+                
+                // Use final dimensions
+                tempCanvas.width = finalWidth;
+                tempCanvas.height = finalHeight;
+                console.log(`🎨 Reference image ${index + 1} canvas created with dimensions: ${finalWidth}x${finalHeight}`);
+                
+                // Draw the reference image at final size
+                tempCtx.drawImage(imgData.image, 0, 0, finalWidth, finalHeight);
+                console.log(`✅ Reference image ${index + 1} drawn to canvas`);
+                
+                // Convert to base64 PNG with RGBA support
+                const dataUrl = tempCanvas.toDataURL('image/png');
+                console.log(`📊 Reference image ${index + 1} data size: ${Math.round(dataUrl.length / 1024)}KB`);
+                
+                referenceImagesData.push(dataUrl);
+            });
+            
+            console.log(`✅ All ${referenceImagesData.length} reference image(s) data created successfully`);
+            return referenceImagesData;
+        }
+
+        function displayInpaintedResult(imageBase64) {
+            console.log('🖼️ Displaying inpainting result...');
+            console.log(`📊 Result image data size: ${Math.round(imageBase64.length / 1024)}KB`);
+            
+            // Create a new image element to display the result
+            const resultImg = new Image();
+            resultImg.onload = function() {
+                console.log(`✅ Inpainted image loaded: ${resultImg.width}x${resultImg.height}`);
+                
+                // Display the result in the dedicated section below
+                const resultSection = document.getElementById('resultSection');
+                const resultImage = document.getElementById('resultImage');
+                const resultInfo = document.getElementById('resultInfo');
+                
+                // Set the result image
+                resultImage.src = 'data:image/png;base64,' + imageBase64;
+                resultImage.alt = 'Inpainted result';
+                
+                // Update result info
+                resultInfo.textContent = `Inpainted image: ${resultImg.width} x ${resultImg.height} pixels`;
+                
+                // Show the result section
+                resultSection.style.display = 'block';
+                
+                // Scroll to the result section
+                resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                console.log('🎉 Inpainting result displayed in dedicated section');
+            };
+            
+            resultImg.onerror = function() {
+                console.error('❌ Failed to load inpainted result image');
+                showStatus('Failed to load inpainted result', 'error');
+            };
+            
+            console.log('🔄 Setting image source...');
+            resultImg.src = 'data:image/png;base64,' + imageBase64;
+        }
+
+        function resizeCanvasForReferenceImages() {
+            if (!imageLoaded || !currentImage) {
+                console.log('No main image loaded, skipping canvas resize');
+                return;
+            }
+            
+            console.log('🔄 Resizing canvas to 1024x1024 for reference compatibility...');
+            
+            // Set canvas dimensions to 1024x1024
+            const displayWidth = 1024;
+            const displayHeight = 1024;
+            
+            // Set canvas dimensions for display
+            imageCanvas.width = displayWidth;
+            imageCanvas.height = displayHeight;
+            maskCanvas.width = displayWidth;
+            maskCanvas.height = displayHeight;
+            
+            // Calculate scale factors for coordinate conversion
+            canvasScale.x = displayWidth / currentImage.width;
+            canvasScale.y = displayHeight / currentImage.height;
+            
+            console.log('Canvas scale:', canvasScale);
+            
+            // Clear both canvases
+            imageCtx.clearRect(0, 0, displayWidth, displayHeight);
+            maskCtx.clearRect(0, 0, displayWidth, displayHeight);
+            
+            // Initialize mask canvas with proper settings
+            maskCtx.globalCompositeOperation = 'source-over';
+            maskCtx.imageSmoothingEnabled = false;
+            
+            // Calculate how to fit the image into 1024x1024 while maintaining aspect ratio
+            const imageAspectRatio = currentImage.width / currentImage.height;
+            const canvasAspectRatio = displayWidth / displayHeight;
+            
+            let drawWidth, drawHeight, offsetX, offsetY;
+            
+            if (imageAspectRatio > canvasAspectRatio) {
+                // Image is wider than canvas - fit to width
+                drawWidth = displayWidth;
+                drawHeight = displayWidth / imageAspectRatio;
+                offsetX = 0;
+                offsetY = (displayHeight - drawHeight) / 2;
+            } else {
+                // Image is taller than canvas - fit to height
+                drawHeight = displayHeight;
+                drawWidth = displayHeight * imageAspectRatio;
+                offsetX = (displayWidth - drawWidth) / 2;
+                offsetY = 0;
+            }
+            
+            // Draw the image centered and scaled to fit 1024x1024
+            imageCtx.drawImage(currentImage, offsetX, offsetY, drawWidth, drawHeight);
+            
+            // Update canvas info
+            canvasInfo.textContent = `Image converted: ${currentImage.width} x ${currentImage.height} → 1024x1024 (centered and scaled)`;
+            showStatus('Canvas converted to 1024x1024 with centered image!', 'success');
+            
+            console.log('✅ Canvas converted to 1024x1024 with proper image scaling');
+        }
+
+        function resetCanvasToOriginalDimensions() {
+            if (!imageLoaded || !currentImage) {
+                console.log('No main image loaded, skipping canvas reset');
+                return;
+            }
+            
+            console.log('🔄 Resetting canvas to original dimensions...');
+            
+            // Calculate display size to fit screen (max 800px width/height)
+            const maxSize = 800;
+            let displayWidth = currentImage.width;
+            let displayHeight = currentImage.height;
+            
+            if (displayWidth > maxSize || displayHeight > maxSize) {
+                const ratio = Math.min(maxSize / displayWidth, maxSize / displayHeight);
+                displayWidth = Math.floor(displayWidth * ratio);
+                displayHeight = Math.floor(displayHeight * ratio);
+            }
+            
+            console.log('Original display size:', displayWidth, 'x', displayHeight);
+            
+            // Set canvas dimensions for display
+            imageCanvas.width = displayWidth;
+            imageCanvas.height = displayHeight;
+            maskCanvas.width = displayWidth;
+            maskCanvas.height = displayHeight;
+            
+            // Calculate scale factors for coordinate conversion
+            canvasScale.x = displayWidth / currentImage.width;
+            canvasScale.y = displayHeight / currentImage.height;
+            
+            console.log('Canvas scale:', canvasScale);
+            
+            // Clear both canvases
+            imageCtx.clearRect(0, 0, displayWidth, displayHeight);
+            maskCtx.clearRect(0, 0, displayWidth, displayHeight);
+            
+            // Initialize mask canvas with proper settings
+            maskCtx.globalCompositeOperation = 'source-over';
+            maskCtx.imageSmoothingEnabled = false;
+            
+            // Draw scaled image on image canvas for display
+            imageCtx.drawImage(currentImage, 0, 0, displayWidth, displayHeight);
+            
+            // Update canvas info
+            canvasInfo.textContent = `Canvas reset: ${currentImage.width} x ${currentImage.height} (displayed at ${displayWidth} x ${displayHeight})`;
+            showStatus('Canvas reset to original dimensions!', 'success');
+            
+            console.log('✅ Canvas reset to original dimensions');
+        }
+
+
+    </script>
+</body>
+</html> 
